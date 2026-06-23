@@ -1274,7 +1274,7 @@ function renderAccount() {
   const accountSections = [
     { key: "profile", label: "Profile", icon: "◌" },
     { key: "rewards", label: "Rewards", icon: "🎁" },
-    { key: "tickets", label: "Tickets", icon: "🎟" },
+    { key: "tickets", label: "فتح تذكرة", icon: "🎟", href: "https://discord.gg/Rel" },
     { key: "admin", label: "لوحة التحكم", icon: "🛡" }
   ];
   const activeSection =
@@ -1321,7 +1321,20 @@ function renderAccount() {
             <div class="account-menu">
               ${accountSections
                 .map(
-                  (section) => `
+                  (section) =>
+                    section.href
+                      ? `
+                    <a
+                      class="account-menu-item"
+                      href="${section.href}"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <span class="account-menu-icon" aria-hidden="true">${section.icon}</span>
+                      <span>${section.label}</span>
+                    </a>
+                  `
+                      : `
                     <button
                       class="account-menu-item ${section.key === activeSection.key ? "active" : ""}"
                       type="button"
