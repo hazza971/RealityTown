@@ -1349,7 +1349,7 @@ function renderAdmin() {
             <article class="admin-login-card">
               <span class="icon-chip">لوحة التحكم محمية</span>
               <h3>التحقق من الصلاحية</h3>
-              <p>يرجى الانتظار قليلًا حتى يتم فحص عضويتك ورتبتك داخل السيرفر.</p>
+              <p>يرجى الانتظار قليلًا حتى يتم فحص حساب Discord المسموح له بالدخول.</p>
             </article>
           </div>
         </div>
@@ -1365,14 +1365,14 @@ function renderAdmin() {
           <div class="page-head">
             <span class="eyebrow">Admin Access</span>
             <h1>تسجيل دخول لوحة التحكم</h1>
-            <p>دخول لوحة التحكم يعتمد على تسجيل دخول Discord والرتبة المسموح لها داخل السيرفر.</p>
+            <p>دخول لوحة التحكم يعتمد على تسجيل دخول Discord والحسابات المسموح لها فقط.</p>
           </div>
 
           <div class="admin-auth-shell">
             <article class="admin-login-card">
-              <span class="icon-chip">Discord Role Required</span>
+              <span class="icon-chip">Discord Access Required</span>
               <h3>سجل دخولك أولًا</h3>
-              <p>إذا كانت لديك الرتبة المحددة داخل السيرفر فسيتم فتح لوحة التحكم تلقائيًا بعد تسجيل الدخول.</p>
+              <p>إذا كان Discord User ID الخاص بك مضافًا في القائمة المسموح لها فسيتم فتح لوحة التحكم تلقائيًا.</p>
               <div class="admin-social-login">
                 <a class="btn btn-discord" href="/api/auth/discord/login?return=${returnTo}">
                   <span>تسجيل الدخول عبر DISCORD</span>
@@ -1393,14 +1393,14 @@ function renderAdmin() {
           <div class="page-head">
             <span class="eyebrow">Admin Access</span>
             <h1>لا تملك صلاحية الدخول</h1>
-            <p>حسابك مسجل، لكن الرتبة الحالية في Discord لا تملك إذن الدخول إلى لوحة التحكم.</p>
+            <p>حسابك مسجل، لكن Discord User ID الحالي غير موجود ضمن الحسابات المسموح لها بدخول لوحة التحكم.</p>
           </div>
 
           <div class="admin-auth-shell">
             <article class="admin-login-card">
               <span class="icon-chip">تم رفض الوصول</span>
               <h3>${escapeAttr(discordUser.username)}</h3>
-              <p>أعط هذا الحساب الرتبة الإدارية داخل السيرفر ثم أعد فتح الصفحة.</p>
+              <p>أضف Discord User ID لهذا الحساب داخل متغيرات Vercel ثم أعد تسجيل الدخول.</p>
             </article>
           </div>
         </div>
