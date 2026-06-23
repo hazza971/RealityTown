@@ -1,5 +1,6 @@
 const storageKey = "reality-town-site-content-v8";
 const adminUnlockSessionKey = "reality-town-admin-unlocked";
+const storeTicketUrl = "https://discord.gg/Rel";
 const defaultContent = {
   site: {
     name: "Reality Town",
@@ -316,7 +317,7 @@ const defaultContent = {
       price: "299 ر.س",
       text: "صفحات تعريفية أساسية مع تصميم احترافي سريع.",
       items: ["الصفحة الرئيسية", "من نحن", "المميزات", "تواصل معنا"],
-      buyUrl: "#contact"
+      buyUrl: "https://discord.gg/Rel"
     },
     {
       slug: "advanced-pack",
@@ -326,7 +327,7 @@ const defaultContent = {
       price: "699 ر.س",
       text: "تشمل صفحات إضافية ومتجر وعرض فريق الإدارة.",
       items: ["فريق الإدارة", "صفحة متجر", "قوانين", "تقديمات أساسية"],
-      buyUrl: "#contact"
+      buyUrl: "https://discord.gg/Rel"
     },
     {
       slug: "pro-pack",
@@ -342,7 +343,7 @@ const defaultContent = {
         "صفحة بثوث مباشرة",
         "إدارة واستضافة طوال الاشتراك"
       ],
-      buyUrl: "#contact"
+      buyUrl: "https://discord.gg/Rel"
     }
   ],
   benefits: [
@@ -1071,7 +1072,7 @@ function renderStore() {
               <h2>${selectedItem.title}</h2>
               <div class="store-detail-price">السعر: ${selectedItem.price}</div>
               <div class="store-detail-actions">
-                <a class="store-detail-buy" href="${selectedItem.buyUrl}">إضافة إلى السلة</a>
+                <a class="store-detail-buy" href="${selectedItem.buyUrl || storeTicketUrl}" target="_blank" rel="noreferrer">فتح تذكرة</a>
               </div>
               <div class="store-detail-meta">التصنيف: ${getStoreSectionTitle(selectedItem.sectionSlug)}</div>
             </div>
@@ -1145,7 +1146,7 @@ function renderStore() {
                           <ul class="catalog-product-list">
                             ${item.items.slice(0, 6).map((entry) => `<li>${entry}</li>`).join("")}
                           </ul>
-                          <a class="catalog-product-button" href="#store/${item.slug}">اختر منتج وسيظهر</a>
+                          <a class="catalog-product-button" href="${item.buyUrl || storeTicketUrl}" target="_blank" rel="noreferrer">فتح تذكرة</a>
                         </div>
                       </article>
                     `
@@ -2000,7 +2001,7 @@ function bindAdmin() {
       price: "0 ر.س",
       text: "اكتب وصف المنتج هنا.",
       items: ["الميزة الأولى", "الميزة الثانية"],
-      buyUrl: "#contact",
+      buyUrl: storeTicketUrl,
       image: "./assets/store-card-reference.png"
     };
 
@@ -2400,7 +2401,7 @@ function normalizeStoreItems(items = []) {
       price: item.price || "0 ر.س",
       text: item.text || "وصف المنتج غير مضاف بعد.",
       items: Array.isArray(item.items) ? item.items : [],
-      buyUrl: item.buyUrl || "#contact",
+      buyUrl: item.buyUrl || storeTicketUrl,
       image: item.image || "./assets/store-card-reference.png"
     };
   });
