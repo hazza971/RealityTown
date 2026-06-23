@@ -4,7 +4,7 @@ const adminSessionKey = "reality-town-admin-session";
 const defaultContent = {
   site: {
     name: "Reality Town",
-    tagline: "الحل الكامل للسيرفرات الاحترافية التي ترغب في الاستفادة القصوى من موقعها الإلكتروني.",
+    tagline: "",
     season: "الحزمة الاحترافية الكاملة",
     heroTitle: "موقع سيرفر احترافي يعكس قوة مجتمعك",
     heroText:
@@ -380,6 +380,9 @@ function loadContent() {
 }
 
 let content = loadContent();
+if (content.site?.tagline === "الحل الكامل للسيرفرات الاحترافية التي ترغب في الاستفادة القصوى من موقعها الإلكتروني.") {
+  content.site.tagline = "";
+}
 content.team = normalizeTeamMembers(content.team);
 content.applications = normalizeApplications(content.applications);
 content.streams = normalizeStreams(content.streams);
@@ -395,6 +398,8 @@ let currentStoreSort = "default";
 let currentStoreQuantity = 1;
 let currentStreamPlatform = "all";
 let currentStreamSort = "default";
+let discordSessionLoaded = false;
+let discordUser = null;
 
 const app = document.getElementById("app");
 const siteNav = document.getElementById("siteNav");
@@ -410,6 +415,7 @@ const routes = {
   streams: renderStreams,
   store: renderStore,
   contact: renderContact,
+  account: renderAccount,
   admin: renderAdmin
 };
 
@@ -435,7 +441,8 @@ function hydrateCommon(route) {
   });
 
   document.getElementById("brandName").textContent = content.site.name;
-  document.getElementById("brandTagline").textContent = content.site.tagline;
+  document.getElementById("brandTagline").textContent = content.site.tagline || "";
+  document.getElementById("brandTagline").hidden = !content.site.tagline;
   document.getElementById("footerBrandName").textContent = content.site.name;
   document.getElementById("footerCopyrightName").textContent = content.site.name;
   document.getElementById("year").textContent = new Date().getFullYear();
@@ -446,6 +453,7 @@ function hydrateCommon(route) {
   if (route === "streams") bindStreamsPage();
   if (route === "store") bindStorePage();
   if (route === "rules") bindRulesPage();
+  if (route === "account") bindAccount();
   if (route === "admin") bindAdmin();
 }
 
@@ -500,7 +508,7 @@ function renderHome() {
             <div class="hero-media-content">
               <span class="tag">Season 2 • Now Live</span>
               <h3>${content.site.name}</h3>
-              <p class="lead">${content.site.tagline}</p>
+              ${content.site.tagline ? `<p class="lead">${content.site.tagline}</p>` : ""}
             </div>
           </div>
 
@@ -1210,6 +1218,72 @@ function renderContact() {
           <ul class="mini-list">
             ${content.benefits.map((benefit) => `<li>${benefit}</li>`).join("")}
           </ul>
+        </article>
+      </div>
+    `
+  );
+}
+
+function renderAccount() {
+  if (!discordSessionLoaded) {
+    return pageTemplate(
+      "تسجيل الدخول",
+      "سجّل دخولك بحسابك الشخصي عن طريق دسكورد.",
+      `
+        <div class="admin-auth-shell">
+          <article class="admin-login-card account-card">
+            <span class="icon-chip">حسابك الشخصي</span>
+            <h3>تسجيل الدخول</h3>
+            <p>جاري التحقق من حالة تسجيل الدخول...</p>
+          </article>
+        </div>
+      `
+    );
+  }
+
+  if (!discordUser) {
+    const returnTo = encodeURIComponent("/#account");
+    return pageTemplate(
+      "تسجيل الدخول",
+      "سجّل دخولك بحسابك الشخصي عن طريق دسكورد.",
+      `
+        <div class="admin-auth-shell">
+          <article class="admin-login-card account-card">
+            <span class="icon-chip">حسابك الشخصي</span>
+            <h3>تسجيل الدخول</h3>
+            <p>اختر تسجيل الدخول عبر Discord لإظهار اسمك وصورتك داخل الموقع.</p>
+            <div class="admin-social-login">
+              <a class="btn btn-discord" href="/api/auth/discord/login?return=${returnTo}">
+                <span>تسجيل الدخول عبر DISCORD</span>
+                <span aria-hidden="true">🎮</span>
+              </a>
+            </div>
+            <div class="hint">لن يتم حفظ كلمة مرور داخل الموقع عند استخدام Discord.</div>
+          </article>
+        </div>
+      `
+    );
+  }
+
+  const avatarUrl = discordUser.avatar
+    ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png?size=128`
+    : "";
+
+  return pageTemplate(
+    "حسابك",
+    "تم تسجيل دخولك بنجاح. يمكنك تسجيل الخروج في أي وقت.",
+    `
+      <div class="admin-auth-shell">
+        <article class="admin-login-card account-card">
+          <span class="icon-chip">تم تسجيل الدخول</span>
+          <h3>${escapeAttr(discordUser.username)}${discordUser.discriminator && discordUser.discriminator !== "0" ? `#${escapeAttr(discordUser.discriminator)}` : ""}</h3>
+          ${avatarUrl ? `<img class="account-avatar" src="${escapeAttr(avatarUrl)}" alt="صورة الحساب" />` : ""}
+          <div class="account-meta">
+            <div class="hint">Discord ID: ${escapeAttr(discordUser.id)}</div>
+          </div>
+          <div class="inline-actions">
+            <button class="btn btn-secondary" type="button" id="accountLogout">تسجيل خروج</button>
+          </div>
         </article>
       </div>
     `
@@ -1985,6 +2059,34 @@ function bindContactForm() {
       form.reset();
     }, 1800);
   });
+}
+
+function bindAccount() {
+  if (!discordSessionLoaded) {
+    fetchDiscordSession().then(() => {
+      if (location.hash.startsWith("#account")) {
+        renderRoute();
+      }
+    });
+  }
+
+  document.getElementById("accountLogout")?.addEventListener("click", async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    discordUser = null;
+    discordSessionLoaded = true;
+    renderRoute();
+  });
+}
+
+async function fetchDiscordSession() {
+  try {
+    const response = await fetch("/api/auth/me");
+    discordUser = response.ok ? await response.json() : null;
+  } catch {
+    discordUser = null;
+  } finally {
+    discordSessionLoaded = true;
+  }
 }
 
 function saveAndRefresh() {
