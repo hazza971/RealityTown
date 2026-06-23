@@ -1,6 +1,4 @@
 const storageKey = "reality-town-site-content-v8";
-const adminSessionKey = "reality-town-admin-session";
-
 const defaultContent = {
   site: {
     name: "Reality Town",
@@ -362,10 +360,6 @@ const defaultContent = {
     discord: "discord.gg/realitytown",
     whatsapp: "+966 50 000 0000",
     location: "الرياض، المملكة العربية السعودية"
-  },
-  adminAuth: {
-    username: "admin",
-    password: "RealityTown@2026"
   }
 };
 
@@ -1341,29 +1335,72 @@ function renderAccount() {
 }
 
 function renderAdmin() {
-  if (!isAdminAuthenticated()) {
+  if (!discordSessionLoaded) {
     return `
       <section class="section">
         <div class="container">
           <div class="page-head">
             <span class="eyebrow">Admin Access</span>
             <h1>تسجيل دخول لوحة التحكم</h1>
-            <p>أدخل اسم المستخدم وكلمة المرور للوصول إلى أدوات إدارة الموقع.</p>
+            <p>جاري التحقق من صلاحيات حسابك عبر Discord.</p>
           </div>
 
           <div class="admin-auth-shell">
             <article class="admin-login-card">
               <span class="icon-chip">لوحة التحكم محمية</span>
-              <h3>تسجيل الدخول</h3>
-              <p>الدخول مخصص للحسابات المخولة فقط.</p>
-              <form id="adminLoginForm" class="control-stack">
-                <input class="field" name="username" placeholder="اسم المستخدم" required />
-                <input class="field" name="password" type="password" placeholder="كلمة المرور" required />
-                <div class="inline-actions">
-                  <button class="btn btn-primary" type="submit">دخول</button>
-                </div>
-                <div class="hint" id="adminLoginMessage">أدخل بيانات الدخول للمتابعة.</div>
-              </form>
+              <h3>التحقق من الصلاحية</h3>
+              <p>يرجى الانتظار قليلًا حتى يتم فحص عضويتك ورتبتك داخل السيرفر.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  if (!discordUser) {
+    const returnTo = encodeURIComponent("/#admin");
+    return `
+      <section class="section">
+        <div class="container">
+          <div class="page-head">
+            <span class="eyebrow">Admin Access</span>
+            <h1>تسجيل دخول لوحة التحكم</h1>
+            <p>دخول لوحة التحكم يعتمد على تسجيل دخول Discord والرتبة المسموح لها داخل السيرفر.</p>
+          </div>
+
+          <div class="admin-auth-shell">
+            <article class="admin-login-card">
+              <span class="icon-chip">Discord Role Required</span>
+              <h3>سجل دخولك أولًا</h3>
+              <p>إذا كانت لديك الرتبة المحددة داخل السيرفر فسيتم فتح لوحة التحكم تلقائيًا بعد تسجيل الدخول.</p>
+              <div class="admin-social-login">
+                <a class="btn btn-discord" href="/api/auth/discord/login?return=${returnTo}">
+                  <span>تسجيل الدخول عبر DISCORD</span>
+                  <span aria-hidden="true">🎮</span>
+                </a>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  if (!isAdminAuthenticated()) {
+    return `
+      <section class="section">
+        <div class="container">
+          <div class="page-head">
+            <span class="eyebrow">Admin Access</span>
+            <h1>لا تملك صلاحية الدخول</h1>
+            <p>حسابك مسجل، لكن الرتبة الحالية في Discord لا تملك إذن الدخول إلى لوحة التحكم.</p>
+          </div>
+
+          <div class="admin-auth-shell">
+            <article class="admin-login-card">
+              <span class="icon-chip">تم رفض الوصول</span>
+              <h3>${escapeAttr(discordUser.username)}</h3>
+              <p>أعط هذا الحساب الرتبة الإدارية داخل السيرفر ثم أعد فتح الصفحة.</p>
             </article>
           </div>
         </div>
@@ -1734,27 +1771,6 @@ function renderAdminTab() {
 
 function bindAdmin() {
   if (!isAdminAuthenticated()) {
-    document.getElementById("adminLoginForm")?.addEventListener("submit", (event) => {
-      event.preventDefault();
-      const form = new FormData(event.currentTarget);
-      const username = String(form.get("username") ?? "").trim();
-      const password = String(form.get("password") ?? "");
-      const message = document.getElementById("adminLoginMessage");
-
-      if (
-        username === content.adminAuth.username &&
-        password === content.adminAuth.password
-      ) {
-        sessionStorage.setItem(adminSessionKey, "true");
-        renderRoute();
-        return;
-      }
-
-      if (message) {
-        message.textContent = "اسم المستخدم أو كلمة المرور غير صحيحة.";
-      }
-    });
-
     return;
   }
 
@@ -1772,8 +1788,12 @@ function bindAdmin() {
   });
 
   document.getElementById("adminLogout")?.addEventListener("click", () => {
-    sessionStorage.removeItem(adminSessionKey);
-    location.hash = "#home";
+    fetch("/api/auth/logout", { method: "POST" }).finally(() => {
+      discordUser = null;
+      discordSessionLoaded = true;
+      syncHeaderAccountLink();
+      location.hash = "#home";
+    });
   });
 
   document.getElementById("adminSiteForm")?.addEventListener("submit", (event) => {
@@ -2141,7 +2161,7 @@ function ensureDiscordSession(route = "") {
   discordSessionPromise = fetchDiscordSession()
     .then(() => {
       syncHeaderAccountLink();
-      if (route === "account" || location.hash.startsWith("#account")) {
+      if (route === "account" || route === "admin" || location.hash.startsWith("#account") || location.hash.startsWith("#admin")) {
         renderRoute();
       }
       return discordUser;
@@ -2214,7 +2234,7 @@ function pageTemplate(title, text, body) {
 }
 
 function isAdminAuthenticated() {
-  return sessionStorage.getItem(adminSessionKey) === "true";
+  return Boolean(discordUser?.isAdmin);
 }
 
 function applicationsFieldsToTextarea(fields = []) {
