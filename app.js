@@ -398,6 +398,7 @@ let currentStoreSort = "default";
 let currentStoreQuantity = 1;
 let currentStreamPlatform = "all";
 let currentStreamSort = "default";
+let currentAccountSection = "profile";
 let discordSessionLoaded = false;
 let discordUser = null;
 
@@ -1268,23 +1269,69 @@ function renderAccount() {
   const avatarUrl = discordUser.avatar
     ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png?size=128`
     : "";
+  const accountSections = [
+    { key: "profile", label: "Profile", icon: "◌" },
+    { key: "rewards", label: "Rewards", icon: "🎁" },
+    { key: "tickets", label: "Tickets", icon: "🎟" }
+  ];
+  const activeSection =
+    accountSections.find((section) => section.key === currentAccountSection) || accountSections[0];
+  const fullUsername = `${discordUser.username}${discordUser.discriminator && discordUser.discriminator !== "0" ? `#${discordUser.discriminator}` : ""}`;
+  const sectionBody =
+    activeSection.key === "profile"
+      ? `
+        <div class="account-content-card">
+          ${avatarUrl ? `<img class="account-avatar" src="${escapeAttr(avatarUrl)}" alt="صورة الحساب" />` : ""}
+          <h3>${escapeAttr(fullUsername)}</h3>
+          <div class="account-meta">
+            <div class="hint">Discord ID: ${escapeAttr(discordUser.id)}</div>
+          </div>
+        </div>
+      `
+      : `
+        <div class="account-content-card account-placeholder-card">
+          <h3>${activeSection.label}</h3>
+          <p>هذا القسم جاهز للربط لاحقًا مع ${activeSection.label.toLowerCase()} الخاصة بحساب اللاعب.</p>
+        </div>
+      `;
 
   return pageTemplate(
     "حسابك",
     "تم تسجيل دخولك بنجاح. يمكنك تسجيل الخروج في أي وقت.",
     `
       <div class="admin-auth-shell">
-        <article class="admin-login-card account-card">
-          <span class="icon-chip">تم تسجيل الدخول</span>
-          <h3>${escapeAttr(discordUser.username)}${discordUser.discriminator && discordUser.discriminator !== "0" ? `#${escapeAttr(discordUser.discriminator)}` : ""}</h3>
-          ${avatarUrl ? `<img class="account-avatar" src="${escapeAttr(avatarUrl)}" alt="صورة الحساب" />` : ""}
-          <div class="account-meta">
-            <div class="hint">Discord ID: ${escapeAttr(discordUser.id)}</div>
+        <div class="account-shell">
+          <article class="admin-login-card account-card account-sidebar-card">
+            <div class="account-header-mini">
+              <div class="account-header-icon">◌</div>
+              <strong>${escapeAttr(discordUser.username).toUpperCase()}</strong>
+            </div>
+            <div class="account-menu">
+              ${accountSections
+                .map(
+                  (section) => `
+                    <button
+                      class="account-menu-item ${section.key === activeSection.key ? "active" : ""}"
+                      type="button"
+                      data-account-section="${section.key}"
+                    >
+                      <span class="account-menu-icon" aria-hidden="true">${section.icon}</span>
+                      <span>${section.label}</span>
+                    </button>
+                  `
+                )
+                .join("")}
+            </div>
+            <button class="account-signout" type="button" id="accountLogout">
+              <span class="account-menu-icon" aria-hidden="true">⇥</span>
+              <span>Sign Out</span>
+            </button>
+          </article>
+
+          <div class="account-panel-wrap">
+            ${sectionBody}
           </div>
-          <div class="inline-actions">
-            <button class="btn btn-secondary" type="button" id="accountLogout">تسجيل خروج</button>
-          </div>
-        </article>
+        </div>
       </div>
     `
   );
@@ -2075,6 +2122,13 @@ function bindAccount() {
     discordUser = null;
     discordSessionLoaded = true;
     renderRoute();
+  });
+
+  document.querySelectorAll("[data-account-section]").forEach((button) => {
+    button.addEventListener("click", () => {
+      currentAccountSection = button.dataset.accountSection || "profile";
+      renderRoute();
+    });
   });
 }
 
