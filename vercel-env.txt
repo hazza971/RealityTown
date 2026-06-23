@@ -2,5 +2,5 @@
 
 DISCORD_CLIENT_ID=1518976135713525992
 DISCORD_CLIENT_SECRET=ac6wJ9aS9AiSEYGGv76qx5KXeyPfsZg8
-DISCORD_REDIRECT_URI=https://YOUR_DOMAIN/api/auth/discord/callback
+DISCORD_REDIRECT_URI=https://reality-town-seven.vercel.app/api/auth/discord/callback
 SESSION_SECRET=SESSION_SECRET=realitytown_9f3xA_22Klm_discord_login_2026_secure
