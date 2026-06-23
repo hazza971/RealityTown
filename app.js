@@ -401,6 +401,7 @@ let currentStreamSort = "default";
 let currentAccountSection = "profile";
 let discordSessionLoaded = false;
 let discordUser = null;
+let discordSessionPromise = null;
 
 const app = document.getElementById("app");
 const siteNav = document.getElementById("siteNav");
@@ -448,6 +449,8 @@ function hydrateCommon(route) {
   document.getElementById("footerCopyrightName").textContent = content.site.name;
   document.getElementById("year").textContent = new Date().getFullYear();
   document.title = `${content.site.name} | موقع سيرفر احترافي`;
+  syncHeaderAccountLink();
+  ensureDiscordSession(route);
 
   bindContactForm();
   if (route === "applications") bindApplicationsPage();
@@ -2109,18 +2112,11 @@ function bindContactForm() {
 }
 
 function bindAccount() {
-  if (!discordSessionLoaded) {
-    fetchDiscordSession().then(() => {
-      if (location.hash.startsWith("#account")) {
-        renderRoute();
-      }
-    });
-  }
-
   document.getElementById("accountLogout")?.addEventListener("click", async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     discordUser = null;
     discordSessionLoaded = true;
+    syncHeaderAccountLink();
     renderRoute();
   });
 
@@ -2132,6 +2128,31 @@ function bindAccount() {
   });
 }
 
+function ensureDiscordSession(route = "") {
+  if (discordSessionLoaded) {
+    syncHeaderAccountLink();
+    return Promise.resolve(discordUser);
+  }
+
+  if (discordSessionPromise) {
+    return discordSessionPromise;
+  }
+
+  discordSessionPromise = fetchDiscordSession()
+    .then(() => {
+      syncHeaderAccountLink();
+      if (route === "account" || location.hash.startsWith("#account")) {
+        renderRoute();
+      }
+      return discordUser;
+    })
+    .finally(() => {
+      discordSessionPromise = null;
+    });
+
+  return discordSessionPromise;
+}
+
 async function fetchDiscordSession() {
   try {
     const response = await fetch("/api/auth/me");
@@ -2141,6 +2162,35 @@ async function fetchDiscordSession() {
   } finally {
     discordSessionLoaded = true;
   }
+}
+
+function syncHeaderAccountLink() {
+  const accountLink = document.querySelector(".nav-login-link");
+  if (!accountLink) return;
+
+  accountLink.setAttribute("href", "#account");
+
+  if (!discordUser) {
+    accountLink.classList.remove("is-account");
+    accountLink.setAttribute("aria-label", "تسجيل دخول");
+    accountLink.removeAttribute("title");
+    accountLink.innerHTML = `<span class="nav-account-label">تسجيل دخول</span>`;
+    return;
+  }
+
+  const fullUsername = `${discordUser.username}${discordUser.discriminator && discordUser.discriminator !== "0" ? `#${discordUser.discriminator}` : ""}`;
+  accountLink.classList.add("is-account");
+  accountLink.setAttribute("aria-label", "فتح الحساب الشخصي");
+  accountLink.setAttribute("title", fullUsername);
+  accountLink.innerHTML = `
+    <span class="nav-account-glyph" aria-hidden="true">
+      <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+        <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z"></path>
+        <path d="M5 20a7 7 0 0 1 14 0"></path>
+      </svg>
+    </span>
+    <span class="nav-account-status" aria-hidden="true"></span>
+  `;
 }
 
 function saveAndRefresh() {
