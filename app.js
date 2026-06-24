@@ -1908,10 +1908,10 @@ function bindAdmin() {
   });
 
   document.getElementById("addMember")?.addEventListener("click", () => {
-    content.memberRoles = normalizeMemberRoles([
+    content.memberRoles = [
       ...(content.memberRoles || []),
       { id: "", role: "member", note: "" }
-    ]);
+    ];
     renderRoute();
   });
 
