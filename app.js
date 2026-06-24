@@ -407,6 +407,8 @@ const app = document.getElementById("app");
 const siteNav = document.getElementById("siteNav");
 const menuToggle = document.getElementById("menuToggle");
 
+const disabledRoutes = new Set(["contact", "applications", "features"]);
+
 const routes = {
   home: renderHome,
   about: renderAbout,
@@ -431,6 +433,10 @@ window.addEventListener("load", renderRoute);
 function renderRoute() {
   const hashPath = (location.hash.replace("#", "").split("?")[0] || "home").trim();
   const [route] = hashPath.split("/");
+  if (disabledRoutes.has(route)) {
+    location.hash = "#home";
+    return;
+  }
   const renderer = routes[route] || routes.home;
   app.innerHTML = renderer();
   hydrateCommon(route);
