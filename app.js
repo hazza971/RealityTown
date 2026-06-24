@@ -399,6 +399,8 @@ let currentStoreQuantity = 1;
 let currentStreamPlatform = "all";
 let currentStreamSort = "default";
 let currentAccountSection = "profile";
+let adminSaveState = "ready";
+let adminSaveTimer = null;
 let discordSessionLoaded = false;
 let discordUser = null;
 let discordSessionPromise = null;
@@ -1495,7 +1497,7 @@ function renderAdmin() {
                 <div class="hint">التغييرات محلية داخل المتصفح الحالي.</div>
               </div>
               <div class="inline-actions">
-                <span class="status-pill">جاهز للحفظ</span>
+                <span class="status-pill ${adminSaveState === "saved" ? "is-saved" : "is-ready"}">${adminSaveState === "saved" ? "تم الحفظ" : "جاهز للحفظ"}</span>
                 <button class="btn btn-secondary" type="button" id="adminLogout">تسجيل خروج</button>
               </div>
             </header>
@@ -2327,7 +2329,21 @@ function syncHeaderAccountLink() {
 
 function saveAndRefresh() {
   localStorage.setItem(storageKey, JSON.stringify(content));
+  markAdminSaved();
   renderRoute();
+}
+
+function markAdminSaved() {
+  adminSaveState = "saved";
+  if (adminSaveTimer) {
+    clearTimeout(adminSaveTimer);
+  }
+  adminSaveTimer = window.setTimeout(() => {
+    adminSaveState = "ready";
+    if (location.hash.startsWith("#admin")) {
+      renderRoute();
+    }
+  }, 2200);
 }
 
 function pageTemplate(title, text, body) {

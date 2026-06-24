@@ -2260,7 +2260,16 @@ textarea {
   gap: 8px;
   padding: 8px 12px;
   border-radius: 999px;
-  background: rgba(57, 217, 138, 0.14);
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.status-pill.is-ready {
+  background: rgba(255, 255, 255, 0.08);
+  color: #d7dbe3;
+}
+
+.status-pill.is-saved {
+  background: rgba(57, 217, 138, 0.16);
   color: #baf1d0;
 }
 
@@ -2269,6 +2278,13 @@ textarea {
   width: 8px;
   height: 8px;
   border-radius: 50%;
+}
+
+.status-pill.is-ready::before {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.status-pill.is-saved::before {
   background: var(--success);
 }
 
