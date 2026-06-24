@@ -2363,7 +2363,11 @@ function pageTemplate(title, text, body) {
 }
 
 function isAdminAuthenticated() {
-  return Boolean(discordUser && (discordUser.isAdmin || isLocalAdmin(discordUser.id)));
+  if (!discordUser) return false;
+  if ((content.memberRoles || []).length) {
+    return isLocalAdmin(discordUser.id);
+  }
+  return Boolean(discordUser.isAdmin);
 }
 
 function normalizeMemberRoles(list) {
