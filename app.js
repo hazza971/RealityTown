@@ -1,5 +1,4 @@
 const storageKey = "reality-town-site-content-v8";
-const adminUnlockSessionKey = "reality-town-admin-unlocked";
 const storeTicketUrl = "https://discord.gg/Rel";
 const defaultContent = {
   site: {
@@ -362,10 +361,6 @@ const defaultContent = {
     discord: "discord.gg/realitytown",
     whatsapp: "+966 50 000 0000",
     location: "الرياض، المملكة العربية السعودية"
-  },
-  adminAccess: {
-    number: "5511",
-    password: "RealityTown@2026"
   }
 };
 
@@ -1281,9 +1276,11 @@ function renderAccount() {
   const accountSections = [
     { key: "profile", label: "Profile", icon: "◌" },
     { key: "rewards", label: "Rewards", icon: "🎁" },
-    { key: "tickets", label: "فتح تذكرة", icon: "🎟", href: "https://discord.gg/Rel" },
-    { key: "admin", label: "لوحة التحكم", icon: "🛡" }
+    { key: "tickets", label: "فتح تذكرة", icon: "🎟", href: "https://discord.gg/Rel" }
   ];
+  if (discordUser.isAdmin) {
+    accountSections.push({ key: "admin", label: "لوحة التحكم", icon: "🛡" });
+  }
   const activeSection =
     accountSections.find((section) => section.key === currentAccountSection) || accountSections[0];
   const fullUsername = `${discordUser.username}${discordUser.discriminator && discordUser.discriminator !== "0" ? `#${discordUser.discriminator}` : ""}`;
@@ -1299,14 +1296,16 @@ function renderAccount() {
         </div>
       `
       : activeSection.key === "admin"
-        ? renderAdminGateCard({
-            title: "لوحة التحكم",
-            text: "أدخل الرقم وكلمة المرور للمتابعة إلى لوحة التحكم.",
-            formId: "accountAdminGateForm",
-            submitLabel: "دخول لوحة التحكم",
-            successLabel: "فتح لوحة التحكم",
-            messageId: "accountAdminGateMessage"
-          })
+        ? `
+        <div class="account-content-card account-admin-entry-card">
+          <span class="icon-chip">إدارة الأعضاء</span>
+          <h3>لوحة التحكم</h3>
+          <p>تم منح هذا الحساب صلاحية الإدارة. يمكنك الدخول مباشرة إلى لوحة التحكم.</p>
+          <div class="inline-actions account-admin-actions">
+            <a class="btn btn-primary" href="#admin">فتح لوحة التحكم</a>
+          </div>
+        </div>
+      `
       : `
         <div class="account-content-card account-placeholder-card">
           <h3>${activeSection.label}</h3>
@@ -1427,18 +1426,17 @@ function renderAdmin() {
         <div class="container">
           <div class="page-head">
             <span class="eyebrow">Admin Access</span>
-            <h1>دخول لوحة التحكم</h1>
-            <p>أدخل الرقم وكلمة المرور للمتابعة إلى لوحة التحكم.</p>
+            <h1>لا تملك صلاحية الدخول</h1>
+            <p>هذا الحساب لا يملك صلاحية الإدارة، لذلك لن تظهر له لوحة التحكم داخل صفحة الحساب.</p>
           </div>
 
-          ${renderAdminGateCard({
-            title: "لوحة التحكم محمية",
-            text: "أدخل الرقم وكلمة المرور المرتبطين بالحساب الإداري ثم تابع.",
-            formId: "adminAccessForm",
-            submitLabel: "تأكيد الدخول",
-            successLabel: "فتح لوحة التحكم",
-            messageId: "adminAccessMessage"
-          })}
+          <div class="admin-auth-shell">
+            <article class="admin-login-card">
+              <span class="icon-chip">تم رفض الوصول</span>
+              <h3>${escapeAttr(discordUser.username)}</h3>
+              <p>إذا أعطيته أدمن في النظام فسيظهر له خيار لوحة التحكم ويدخل مباشرة.</p>
+            </article>
+          </div>
         </div>
       </section>
     `;
@@ -1515,14 +1513,6 @@ function renderAdminTab() {
         <div class="control-grid">
           <input class="field" name="primaryCta" value="${escapeAttr(content.site.primaryCta)}" placeholder="زر رئيسي" />
           <input class="field" name="secondaryCta" value="${escapeAttr(content.site.secondaryCta)}" placeholder="زر ثانوي" />
-        </div>
-        <div class="grid-card">
-          <h3>دخول لوحة التحكم</h3>
-          <div class="control-grid">
-            <input class="field" name="adminNumber" value="${escapeAttr(content.adminAccess?.number)}" placeholder="الرقم" />
-            <input class="field" name="adminPassword" type="password" value="${escapeAttr(content.adminAccess?.password)}" placeholder="كلمة المرور" />
-          </div>
-          <div class="hint">هذه البيانات مطلوبة عند الضغط على خيار لوحة التحكم من صفحة الحساب.</div>
         </div>
         <div class="inline-actions">
           <button class="btn btn-primary" type="submit">حفظ التعديلات</button>
@@ -1814,11 +1804,6 @@ function renderAdminTab() {
 }
 
 function bindAdmin() {
-  document.getElementById("adminAccessForm")?.addEventListener("submit", (event) => {
-    event.preventDefault();
-    handleAdminGateSubmit(event.currentTarget, "adminAccessMessage");
-  });
-
   if (!isAdminAuthenticated()) {
     return;
   }
@@ -1838,7 +1823,6 @@ function bindAdmin() {
 
   document.getElementById("adminLogout")?.addEventListener("click", () => {
     fetch("/api/auth/logout", { method: "POST" }).finally(() => {
-      sessionStorage.removeItem(adminUnlockSessionKey);
       discordUser = null;
       discordSessionLoaded = true;
       syncHeaderAccountLink();
@@ -1858,10 +1842,6 @@ function bindAdmin() {
       heroText: form.get("heroText"),
       primaryCta: form.get("primaryCta"),
       secondaryCta: form.get("secondaryCta")
-    };
-    content.adminAccess = {
-      number: String(form.get("adminNumber") ?? "").trim() || defaultContent.adminAccess.number,
-      password: String(form.get("adminPassword") ?? "") || defaultContent.adminAccess.password
     };
     saveAndRefresh();
   });
@@ -2190,7 +2170,6 @@ function bindAccount() {
     await fetch("/api/auth/logout", { method: "POST" });
     discordUser = null;
     discordSessionLoaded = true;
-    sessionStorage.removeItem(adminUnlockSessionKey);
     syncHeaderAccountLink();
     renderRoute();
   });
@@ -2200,11 +2179,6 @@ function bindAccount() {
       currentAccountSection = button.dataset.accountSection || "profile";
       renderRoute();
     });
-  });
-
-  document.getElementById("accountAdminGateForm")?.addEventListener("submit", (event) => {
-    event.preventDefault();
-    handleAdminGateSubmit(event.currentTarget, "accountAdminGateMessage");
   });
 }
 
@@ -2273,65 +2247,6 @@ function syncHeaderAccountLink() {
   `;
 }
 
-function renderAdminGateCard({ title, text, formId, submitLabel, successLabel, messageId }) {
-  if (isAdminVerificationPassed()) {
-    return `
-      <div class="admin-auth-shell">
-        <article class="admin-login-card account-card">
-          <span class="icon-chip">تم التحقق</span>
-          <h3>${title}</h3>
-          <p>${text}</p>
-          <div class="inline-actions account-admin-actions">
-            <a class="btn btn-primary" href="#admin">${successLabel}</a>
-          </div>
-        </article>
-      </div>
-    `;
-  }
-
-  return `
-    <div class="admin-auth-shell">
-      <article class="admin-login-card account-card account-admin-card">
-        <span class="icon-chip">لوحة التحكم</span>
-        <h3>${title}</h3>
-        <p>${text}</p>
-        <form id="${formId}" class="control-stack">
-          <input class="field" name="number" inputmode="numeric" placeholder="الرقم" required />
-          <input class="field" name="password" type="password" placeholder="كلمة المرور" required />
-          <div class="inline-actions">
-            <button class="btn btn-primary" type="submit">${submitLabel}</button>
-          </div>
-          <div class="hint" id="${messageId}">أدخل الرقم وكلمة المرور للمتابعة.</div>
-        </form>
-      </article>
-    </div>
-  `;
-}
-
-function handleAdminGateSubmit(formElement, messageId) {
-  const form = new FormData(formElement);
-  const number = String(form.get("number") ?? "").trim();
-  const password = String(form.get("password") ?? "");
-  const message = document.getElementById(messageId);
-
-  if (
-    number === String(content.adminAccess?.number ?? "").trim() &&
-    password === String(content.adminAccess?.password ?? "")
-  ) {
-    sessionStorage.setItem(adminUnlockSessionKey, "true");
-    if (message) {
-      message.textContent = "تم التحقق بنجاح. جاري فتح لوحة التحكم...";
-    }
-    location.hash = "#admin";
-    return;
-  }
-
-  sessionStorage.removeItem(adminUnlockSessionKey);
-  if (message) {
-    message.textContent = "الرقم أو كلمة المرور غير صحيحة.";
-  }
-}
-
 function saveAndRefresh() {
   localStorage.setItem(storageKey, JSON.stringify(content));
   renderRoute();
@@ -2353,11 +2268,7 @@ function pageTemplate(title, text, body) {
 }
 
 function isAdminAuthenticated() {
-  return Boolean(discordUser && isAdminVerificationPassed());
-}
-
-function isAdminVerificationPassed() {
-  return sessionStorage.getItem(adminUnlockSessionKey) === "true";
+  return Boolean(discordUser?.isAdmin);
 }
 
 function applicationsFieldsToTextarea(fields = []) {
