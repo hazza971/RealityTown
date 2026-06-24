@@ -361,7 +361,11 @@ const defaultContent = {
     discord: "discord.gg/realitytown",
     whatsapp: "+966 50 000 0000",
     location: "الرياض، المملكة العربية السعودية"
-  }
+  },
+  memberRoles: [
+    // أدمن افتراضي (تقدر تغيّره/تحذفه من لوحة التحكم)
+    { id: "299199599313289216", role: "admin", note: "Owner" }
+  ]
 };
 
 function loadContent() {
@@ -378,6 +382,7 @@ let content = loadContent();
 if (content.site?.tagline === "الحل الكامل للسيرفرات الاحترافية التي ترغب في الاستفادة القصوى من موقعها الإلكتروني.") {
   content.site.tagline = "";
 }
+content.memberRoles = normalizeMemberRoles(content.memberRoles);
 content.team = normalizeTeamMembers(content.team);
 content.applications = normalizeApplications(content.applications);
 content.streams = normalizeStreams(content.streams);
@@ -1278,7 +1283,7 @@ function renderAccount() {
     { key: "rewards", label: "Rewards", icon: "🎁" },
     { key: "tickets", label: "فتح تذكرة", icon: "🎟", href: "https://discord.gg/Rel" }
   ];
-  if (discordUser.isAdmin) {
+  if (isAdminAuthenticated()) {
     accountSections.push({ key: "admin", label: "لوحة التحكم", icon: "🛡" });
   }
   const activeSection =
@@ -1444,6 +1449,7 @@ function renderAdmin() {
 
   const tabs = [
     { key: "site", label: "الإعدادات العامة" },
+    { key: "members", label: "إدارة الأعضاء" },
     { key: "stats", label: "الإحصائيات" },
     { key: "features", label: "المميزات" },
     { key: "rules", label: "القوانين" },
@@ -1502,6 +1508,42 @@ function renderAdmin() {
 }
 
 function renderAdminTab() {
+  if (currentAdminTab === "members") {
+    return `
+      <form id="adminMembersForm" class="control-stack">
+        <div class="grid-card">
+          <h3>إدارة الأعضاء</h3>
+          <p class="hint">حط Discord ID وحدد رتبته. إذا خليته <b>Admin</b> بيظهر له خيار لوحة التحكم في صفحة الحساب.</p>
+        </div>
+
+        ${(content.memberRoles || [])
+          .map(
+            (member, index) => `
+              <div class="grid-card admin-rule-card">
+                <div class="control-grid">
+                  <input class="field" name="id-${index}" value="${escapeAttr(member.id)}" placeholder="Discord ID" required />
+                  <select class="field" name="role-${index}">
+                    <option value="member" ${member.role === "member" ? "selected" : ""}>عضو</option>
+                    <option value="admin" ${member.role === "admin" ? "selected" : ""}>أدمن</option>
+                  </select>
+                </div>
+                <input class="field" name="note-${index}" value="${escapeAttr(member.note || "")}" placeholder="ملاحظة (اختياري)" />
+                <div class="inline-actions">
+                  <button class="btn btn-secondary" type="button" data-delete-member="${index}">حذف</button>
+                </div>
+              </div>
+            `
+          )
+          .join("")}
+
+        <div class="inline-actions">
+          <button class="btn btn-secondary" type="button" id="addMember">إضافة عضو</button>
+          <button class="btn btn-primary" type="submit">حفظ الصلاحيات</button>
+        </div>
+      </form>
+    `;
+  }
+
   if (currentAdminTab === "site") {
     return `
       <form id="adminSiteForm" class="control-stack">
@@ -1818,6 +1860,7 @@ function bindAdmin() {
   document.getElementById("resetContent")?.addEventListener("click", () => {
     localStorage.removeItem(storageKey);
     content = structuredClone(defaultContent);
+    content.memberRoles = normalizeMemberRoles(content.memberRoles);
     renderRoute();
   });
 
@@ -1844,6 +1887,41 @@ function bindAdmin() {
       secondaryCta: form.get("secondaryCta")
     };
     saveAndRefresh();
+  });
+
+  document.getElementById("adminMembersForm")?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const next = [];
+    const count = (content.memberRoles || []).length;
+
+    for (let i = 0; i < count; i += 1) {
+      const id = String(form.get(`id-${i}`) ?? "").trim();
+      const role = String(form.get(`role-${i}`) ?? "member");
+      const note = String(form.get(`note-${i}`) ?? "");
+      if (!id) continue;
+      next.push({ id, role: role === "admin" ? "admin" : "member", note });
+    }
+
+    content.memberRoles = normalizeMemberRoles(next);
+    saveAndRefresh();
+  });
+
+  document.getElementById("addMember")?.addEventListener("click", () => {
+    content.memberRoles = normalizeMemberRoles([
+      ...(content.memberRoles || []),
+      { id: "", role: "member", note: "" }
+    ]);
+    renderRoute();
+  });
+
+  document.querySelectorAll("[data-delete-member]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const index = Number(button.dataset.deleteMember);
+      if (Number.isNaN(index)) return;
+      content.memberRoles = (content.memberRoles || []).filter((_, idx) => idx !== index);
+      saveAndRefresh();
+    });
   });
 
   document.getElementById("adminStatsForm")?.addEventListener("submit", (event) => {
@@ -2268,7 +2346,23 @@ function pageTemplate(title, text, body) {
 }
 
 function isAdminAuthenticated() {
-  return Boolean(discordUser?.isAdmin);
+  return Boolean(discordUser && (discordUser.isAdmin || isLocalAdmin(discordUser.id)));
+}
+
+function normalizeMemberRoles(list) {
+  const items = Array.isArray(list) ? list : [];
+  return items
+    .map((entry) => ({
+      id: String(entry?.id ?? "").trim(),
+      role: entry?.role === "admin" ? "admin" : "member",
+      note: String(entry?.note ?? "")
+    }))
+    .filter((entry) => entry.id);
+}
+
+function isLocalAdmin(userId) {
+  const id = String(userId || "").trim();
+  return (content.memberRoles || []).some((entry) => entry.id === id && entry.role === "admin");
 }
 
 function applicationsFieldsToTextarea(fields = []) {
