@@ -364,7 +364,8 @@ const defaultContent = {
   },
   memberRoles: [
     // أدمن افتراضي (تقدر تغيّره/تحذفه من لوحة التحكم)
-    { id: "299199599313289216", role: "admin", note: "Owner" }
+    { id: "299199599313289216", role: "admin", note: "Owner" },
+    { id: "721655360884178944", role: "admin", note: "Admin" }
   ]
 };
 
@@ -382,7 +383,7 @@ let content = loadContent();
 if (content.site?.tagline === "الحل الكامل للسيرفرات الاحترافية التي ترغب في الاستفادة القصوى من موقعها الإلكتروني.") {
   content.site.tagline = "";
 }
-content.memberRoles = normalizeMemberRoles(content.memberRoles);
+content.memberRoles = mergeMemberRoles(defaultContent.memberRoles, content.memberRoles);
 content.team = normalizeTeamMembers(content.team);
 content.applications = normalizeApplications(content.applications);
 content.streams = normalizeStreams(content.streams);
@@ -1862,7 +1863,7 @@ function bindAdmin() {
   document.getElementById("resetContent")?.addEventListener("click", () => {
     localStorage.removeItem(storageKey);
     content = structuredClone(defaultContent);
-    content.memberRoles = normalizeMemberRoles(content.memberRoles);
+    content.memberRoles = mergeMemberRoles(defaultContent.memberRoles, content.memberRoles);
     renderRoute();
   });
 
@@ -1905,7 +1906,7 @@ function bindAdmin() {
       next.push({ id, role: role === "admin" ? "admin" : "member", note });
     }
 
-    content.memberRoles = normalizeMemberRoles(next);
+    content.memberRoles = mergeMemberRoles(defaultContent.memberRoles, next);
     saveAndRefresh();
   });
 
@@ -2374,6 +2375,28 @@ function normalizeMemberRoles(list) {
       note: String(entry?.note ?? "")
     }))
     .filter((entry) => entry.id);
+}
+
+function mergeMemberRoles(...lists) {
+  const merged = new Map();
+
+  lists
+    .flatMap((list) => normalizeMemberRoles(list))
+    .forEach((entry) => {
+      const current = merged.get(entry.id);
+      if (!current) {
+        merged.set(entry.id, entry);
+        return;
+      }
+
+      merged.set(entry.id, {
+        id: entry.id,
+        role: current.role === "admin" || entry.role === "admin" ? "admin" : "member",
+        note: entry.note || current.note || ""
+      });
+    });
+
+  return Array.from(merged.values());
 }
 
 function isLocalAdmin(userId) {
