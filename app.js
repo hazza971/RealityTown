@@ -9,8 +9,8 @@ const defaultContent = {
     heroText:
       "واجهة رقمية حديثة لسيرفرات الرول بلاي، تجمع بين الهوية البصرية القوية، الصفحات المتكاملة، وتجربة استخدام احترافية واضحة.",
     primaryCta: "ابدأ الآن",
-    secondaryCta: "استعرض المميزات",
-    discordUrl: "#contact",
+    secondaryCta: "استعرض القوانين",
+    discordUrl: "https://discord.gg/Rel",
     joinUrl: "#store",
     aboutTitle: "لماذا Reality Town",
     aboutText:
@@ -490,7 +490,7 @@ function renderHome() {
           <p class="hero-description">${content.site.heroText}</p>
           <div class="hero-actions">
             <a class="btn btn-primary" href="${content.site.joinUrl}">${content.site.primaryCta}</a>
-            <a class="btn btn-secondary" href="#features">${content.site.secondaryCta}</a>
+            <a class="btn btn-secondary" href="#rules">${content.site.secondaryCta}</a>
           </div>
           <div class="hero-trust-list">
             <div class="hero-trust-item">تصميم احترافي فاخر</div>
@@ -1061,11 +1061,16 @@ function renderStore() {
     return 0;
   });
   const selectedItem = detailSlug ? storeItems.find((item) => item.slug === detailSlug) : null;
+  const lowestPrice = storeItems.length
+    ? Math.min(...storeItems.map((item) => getNumericPrice(item.price)).filter((value) => Number.isFinite(value) && value > 0))
+    : 0;
 
   if (selectedItem) {
+    const sectionTitle = getStoreSectionTitle(selectedItem.sectionSlug);
+    const featureCount = selectedItem.items?.length || 0;
     return pageTemplate(
       "المتجر",
-      "شاشة تفصيل المنتج تعرض الاسم والسعر والصورة والوصف بنفس فكرة صفحات المنتجات المنفصلة.",
+      "صفحة منتج بأسلوب فاخر تعرض السعر والمزايا ونقطة الدخول السريعة إلى التذكرة.",
       `
         <section class="store-detail-shell">
           <div class="store-detail-breadcrumb">
@@ -1077,27 +1082,60 @@ function renderStore() {
           </div>
 
           <div class="store-detail-hero">
-            <div class="store-detail-summary">
-              <h2>${selectedItem.title}</h2>
-              <div class="store-detail-price">السعر: ${selectedItem.price}</div>
-              <div class="store-detail-actions">
-                <a class="store-detail-buy" href="${selectedItem.buyUrl || storeTicketUrl}" target="_blank" rel="noreferrer">فتح تذكرة</a>
+            <div class="store-detail-media">
+              <div class="store-detail-image-wrap">
+                <div class="store-detail-image" style="background-image: linear-gradient(180deg, rgba(1, 10, 20, 0.08), rgba(1, 10, 20, 0.35)), url('${escapeAttr(selectedItem.image)}')"></div>
+                <span class="store-detail-floating-badge">${selectedItem.badge || sectionTitle}</span>
               </div>
-              <div class="store-detail-meta">التصنيف: ${getStoreSectionTitle(selectedItem.sectionSlug)}</div>
             </div>
 
-            <div class="store-detail-media">
-              <div class="store-detail-image" style="background-image: linear-gradient(180deg, rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.08)), url('${escapeAttr(selectedItem.image)}')"></div>
+            <div class="store-detail-summary">
+              <div class="store-detail-kicker">عرض فاخر · ${sectionTitle}</div>
+              <h2>${selectedItem.title}</h2>
+              <p class="store-detail-copy">${selectedItem.text}</p>
+              <div class="store-detail-meta-row">
+                <span class="store-detail-chip">التصنيف: ${sectionTitle}</span>
+                <span class="store-detail-chip">المزايا: ${featureCount}</span>
+                <span class="store-detail-chip">تنفيذ سريع</span>
+              </div>
+              <div class="store-detail-price-box">
+                <strong class="store-detail-price">${selectedItem.price}</strong>
+                <span>يشمل تنفيذ الطلب عبر تذكرة مباشرة في الديسكورد</span>
+              </div>
+              <div class="store-detail-actions">
+                <a class="store-detail-buy" href="${selectedItem.buyUrl || storeTicketUrl}" target="_blank" rel="noreferrer">فتح تذكرة</a>
+                <a class="store-detail-ghost" href="#store">العودة للمتجر</a>
+              </div>
             </div>
           </div>
 
-          <article class="store-detail-description">
-            <h3>وصف المنتج</h3>
-            <p>${selectedItem.text}</p>
-            <ul class="catalog-product-list">
-              ${selectedItem.items.map((entry) => `<li>${entry}</li>`).join("")}
-            </ul>
-          </article>
+          <div class="store-detail-panels">
+            <article class="store-detail-description">
+              <h3>ماذا يشمل هذا العرض؟</h3>
+              <p>${selectedItem.text}</p>
+              <ul class="catalog-product-list">
+                ${selectedItem.items.map((entry) => `<li>${entry}</li>`).join("")}
+              </ul>
+            </article>
+
+            <aside class="store-detail-specs">
+              <h3>ملخص سريع</h3>
+              <div class="store-detail-spec-list">
+                <div class="store-detail-spec-item">
+                  <span>النوع</span>
+                  <strong>${sectionTitle}</strong>
+                </div>
+                <div class="store-detail-spec-item">
+                  <span>عدد المزايا</span>
+                  <strong>${featureCount}</strong>
+                </div>
+                <div class="store-detail-spec-item">
+                  <span>طريقة الطلب</span>
+                  <strong>تذكرة Discord</strong>
+                </div>
+              </div>
+            </aside>
+          </div>
         </section>
       `
     );
@@ -1105,34 +1143,63 @@ function renderStore() {
 
   return pageTemplate(
     "المتجر",
-    "ادعم السيرفر واحصل على منتجات وخدمات حصرية عبر واجهة متجر احترافية مستوحاة من أسلوب الكتالوجات الحديثة.",
+    "واجهة متجر فاخرة تعرض الباقات والخدمات بأسلوب بصري أقوى وتجربة أسرع لاتخاذ القرار.",
     `
       <section class="catalog-store-shell">
-        <div class="catalog-store-head">
-          <small>${content.site.name}</small>
-          <h2>متجر ${content.site.name}</h2>
-          <p>باقة كاملة للسيرفرات الاحترافية</p>
+        <div class="catalog-store-hero">
+          <div class="catalog-store-head">
+            <small>${content.site.name}</small>
+            <h2>متجر ${content.site.name}</h2>
+            <p>باقات وخدمات مصممة لسيرفرات تبحث عن حضور قوي وتجربة بيع احترافية.</p>
+            <div class="catalog-store-stats">
+              <div class="catalog-store-stat">
+                <strong>${storeItems.length}</strong>
+                <span>منتج</span>
+              </div>
+              <div class="catalog-store-stat">
+                <strong>${storeSections.length}</strong>
+                <span>تصنيف</span>
+              </div>
+              <div class="catalog-store-stat">
+                <strong>${lowestPrice ? `${lowestPrice}` : "--"}</strong>
+                <span>${lowestPrice ? "أقل سعر" : "غير متاح"}</span>
+              </div>
+            </div>
+          </div>
+
+          <aside class="catalog-highlight-card">
+            <span class="catalog-highlight-badge">Premium Storefront</span>
+            <h3>جاهز لفتح التذكرة مباشرة</h3>
+            <p>اختر الباقة المناسبة ثم افتح تذكرتك فورًا على الديسكورد لإكمال الطلب بسرعة ووضوح.</p>
+            <a class="catalog-highlight-link" href="${storeTicketUrl}" target="_blank" rel="noreferrer">فتح تذكرة الآن</a>
+          </aside>
         </div>
 
         <div class="catalog-store-toolbar">
-          <div class="catalog-store-filters">
-            ${categories
-              .map(
-                (category) => `
-                  <button class="catalog-filter-pill ${currentStoreCategory === category ? "active" : ""}" type="button" data-store-category="${category}">
-                    ${category === "all" ? "الكل" : getStoreSectionTitle(category)}
-                  </button>
-                `
-              )
-              .join("")}
+          <div class="catalog-store-toolbar-head">
+            <strong>استعرض المنتجات</strong>
+            <span>${sortedItems.length} منتج متاح</span>
           </div>
+          <div class="catalog-store-toolbar-main">
+            <div class="catalog-store-filters">
+              ${categories
+                .map(
+                  (category) => `
+                    <button class="catalog-filter-pill ${currentStoreCategory === category ? "active" : ""}" type="button" data-store-category="${category}">
+                      ${category === "all" ? "الكل" : getStoreSectionTitle(category)}
+                    </button>
+                  `
+                )
+                .join("")}
+            </div>
 
-          <div class="catalog-store-sort-wrap">
-            <select id="storeSortSelect" class="catalog-store-sort">
-              <option value="default" ${currentStoreSort === "default" ? "selected" : ""}>الافتراضي</option>
-              <option value="price-asc" ${currentStoreSort === "price-asc" ? "selected" : ""}>السعر من الأقل</option>
-              <option value="price-desc" ${currentStoreSort === "price-desc" ? "selected" : ""}>السعر من الأعلى</option>
-            </select>
+            <div class="catalog-store-sort-wrap">
+              <select id="storeSortSelect" class="catalog-store-sort">
+                <option value="default" ${currentStoreSort === "default" ? "selected" : ""}>الافتراضي</option>
+                <option value="price-asc" ${currentStoreSort === "price-asc" ? "selected" : ""}>السعر من الأقل</option>
+                <option value="price-desc" ${currentStoreSort === "price-desc" ? "selected" : ""}>السعر من الأعلى</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -1144,18 +1211,27 @@ function renderStore() {
                   .map(
                     (item) => `
                       <article class="catalog-product-card">
-                        <a class="catalog-product-image" href="#store/${item.slug}" style="background-image: linear-gradient(180deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.28)), url('${escapeAttr(item.image)}')">
-                          <span class="catalog-product-badge">${item.badge || getStoreSectionTitle(item.sectionSlug)}</span>
+                        <a class="catalog-product-image" href="#store/${item.slug}" style="background-image: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(1, 8, 18, 0.48)), url('${escapeAttr(item.image)}')">
+                          <div class="catalog-product-image-top">
+                            <span class="catalog-product-badge">${item.badge || getStoreSectionTitle(item.sectionSlug)}</span>
+                            <span class="catalog-product-preview">عرض التفاصيل</span>
+                          </div>
+                          <div class="catalog-product-image-bottom">
+                            <strong>${item.price}</strong>
+                            <span>${getStoreSectionTitle(item.sectionSlug)}</span>
+                          </div>
                         </a>
                         <div class="catalog-product-content">
-                          <div class="catalog-product-subtitle">${getStoreSectionTitle(item.sectionSlug)}</div>
+                          <div class="catalog-product-subtitle">${getStoreSectionTitle(item.sectionSlug)} · ${item.items.length} مزايا</div>
                           <h3>${item.title}</h3>
                           <p>${item.text}</p>
-                          <div class="catalog-product-price">${item.price}</div>
                           <ul class="catalog-product-list">
-                            ${item.items.slice(0, 6).map((entry) => `<li>${entry}</li>`).join("")}
+                            ${item.items.slice(0, 4).map((entry) => `<li>${entry}</li>`).join("")}
                           </ul>
-                          <a class="catalog-product-button" href="${item.buyUrl || storeTicketUrl}" target="_blank" rel="noreferrer">فتح تذكرة</a>
+                          <div class="catalog-product-actions">
+                            <a class="catalog-product-link" href="#store/${item.slug}">عرض التفاصيل</a>
+                            <a class="catalog-product-button" href="${item.buyUrl || storeTicketUrl}" target="_blank" rel="noreferrer">فتح تذكرة</a>
+                          </div>
                         </div>
                       </article>
                     `
